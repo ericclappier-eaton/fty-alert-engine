@@ -172,6 +172,7 @@ std::set<std::string> AlertConfiguration::readConfiguration(void)
                     _metrics_alerts_map.insert(std::make_pair(interestedTopic, std::vector<std::string>{rulename}));
                 }
             }
+
             // add rule to the configuration
             _alerts_map.insert(std::make_pair(rulename, std::make_pair(std::move(rule), emptyAlerts)));
             log_debug("file '%s' read correctly", fname.c_str());
@@ -205,6 +206,13 @@ int AlertConfiguration::addRule(std::istream& newRuleString, std::set<std::strin
         return -100;
     }
     // end PQSWMBT-3723
+
+    // PQSWMBT-4921 Xphase rule exceptions
+    if (rejectAddRuleXphase(temp_rule)) {
+        log_debug("Xphase rule instanciation rejected (%s)", temp_rule->name().c_str());
+        return -101;
+    }
+    // end PQSWMBT-4921
 
     if (haveRule(temp_rule)) {
         log_error("rule already exists");
