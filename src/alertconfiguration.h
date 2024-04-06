@@ -174,17 +174,16 @@ public:
     bool haveRule(const RulePtr& rule) const
     {
         return haveRule(rule->name());
-    };
+    }
 
     bool haveRule(const std::string& rule_name) const
     {
-        const auto& i = _alerts_map.find(rule_name);
-        return (i != _alerts_map.end());
-    };
+        return (_alerts_map.find(rule_name) != _alerts_map.end());
+    }
 
     int updateAlertState(const char* rule_name, const char* element_name, const char* new_state, PureAlert& pureAlert);
 
-    std::string getPersistencePath(void) const
+    std::string getPersistencePath() const
     {
         return _path + '/';
     }
@@ -196,14 +195,13 @@ public:
     int deleteRules(RuleMatcher* matcher, std::map<std::string, std::vector<PureAlert>>& alertsToSend,
         std::vector<std::string>& rulesDeleted);
 
-    const std::vector<std::string> getRulesByMetric(std::string metric)
+    const std::vector<std::string> getRulesByMetric(const std::string& metric)
     {
-        auto it = _metrics_alerts_map.find(metric);
-        if (it == _metrics_alerts_map.end())
-            return std::vector<std::string>{};
-        else
+        const auto& it = _metrics_alerts_map.find(metric);
+        if (it != _metrics_alerts_map.cend()) {
             return it->second;
-        // return std::vector<std::string>(it->second);
+        }
+        return {};
     }
 
 private:
