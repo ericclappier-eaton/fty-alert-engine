@@ -87,10 +87,12 @@ public:
     {
         return _alerts_map.end();
     }
+
     size_t size()
     {
         return _alerts_map.size();
     }
+
     B& at(std::string name)
     {
         return _alerts_map.at(name);
@@ -192,16 +194,12 @@ public:
 
     int deleteAllRules(const std::string& element, std::map<std::string, std::vector<PureAlert>>& alertsToSend);
 
-    int deleteRules(RuleMatcher* matcher, std::map<std::string, std::vector<PureAlert>>& alertsToSend,
-        std::vector<std::string>& rulesDeleted);
+    int deleteRules(RuleMatcher* matcher, std::map<std::string, std::vector<PureAlert>>& alertsToSend, std::vector<std::string>& rulesDeleted);
 
     const std::vector<std::string> getRulesByMetric(const std::string& metric)
     {
         const auto& it = _metrics_alerts_map.find(metric);
-        if (it != _metrics_alerts_map.cend()) {
-            return it->second;
-        }
-        return {};
+        return ((it != _metrics_alerts_map.cend()) ? it->second : std::vector<std::string>{});
     }
 
 private:

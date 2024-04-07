@@ -63,6 +63,6 @@ private:
     std::string _element_name; /// asset iname
     std::string _source; /// metric type
     double      _value{0};
-    uint64_t    _timestamp{0}; /// last update (epoch time, sec.)
+    uint64_t    _timestamp{0}; /// latest update (epoch time, sec.)
     uint64_t    _ttl{0}; /// time to live (sec)
 };

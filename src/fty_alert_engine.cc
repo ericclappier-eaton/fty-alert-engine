@@ -23,7 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <czmq.h>
 
 static const char* CONFIG = "/etc/fty-alert-engine/fty-alert-engine.cfg";
-// path to the directory, where rules are stored. CAUTION: **without** last slash!
+// path to the directory, where rules are stored. CAUTION: **without** ending slash!
 static const char* PATH = "/var/lib/fty/fty-alert-engine";
 
 // agents name
