@@ -17,73 +17,67 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "metriclist.h"
-#include <cassert>
 #include <cmath>
-#include <czmq.h>
+#include <ctime>
 
 void MetricList::addMetric(const MetricInfo& metricInfo)
 {
     // try to find topic
     auto it = _knownMetrics.find(metricInfo.generateTopic());
     if (it != _knownMetrics.cend()) {
-        // if it was found -> replace with new value
+        // found -> update
         it->second = metricInfo;
-    } else {
-        // if it wasn't found -> insert new metric
+    }
+    else {
+        // not found -> insert
         _knownMetrics.emplace(metricInfo.generateTopic(), metricInfo);
     }
+
     _lastInsertedMetric = metricInfo;
 }
 
-
-double MetricList::findAndCheck(const std::string& topic) const
+MetricInfo MetricList::getLastMetric() const
 {
-    auto it = _knownMetrics.find(topic);
-    if (it == _knownMetrics.cend()) {
-        return std::nan("");
-    } else {
-        uint64_t currentTimestamp = static_cast<uint64_t>(::time(NULL));
-        if ((currentTimestamp - it->second._timestamp) > it->second._ttl) {
-            return std::nan("");
-        } else {
-            return it->second._value;
-        }
-    }
+    return _lastInsertedMetric;
 }
-
-
-double MetricList::find(const std::string& topic) const
-{
-    auto it = _knownMetrics.find(topic);
-    if (it == _knownMetrics.cend()) {
-        return std::nan("");
-    } else {
-        return it->second._value;
-    }
-}
-
 
 MetricInfo MetricList::getMetricInfo(const std::string& topic) const
 {
-    auto it = _knownMetrics.find(topic);
-    if (it == _knownMetrics.cend()) {
-        return MetricInfo();
-    } else {
-        return it->second;
-    }
+    const auto& it = _knownMetrics.find(topic);
+    return (it != _knownMetrics.cend()) ? it->second : MetricInfo();
 }
-
 
 void MetricList::removeOldMetrics()
 {
-    uint64_t currentTimestamp = static_cast<uint64_t>(::time(NULL));
+    uint64_t now = static_cast<uint64_t>(::time(NULL));
 
-    for (std::map<std::string, MetricInfo>::iterator iter = _knownMetrics.begin(); iter != _knownMetrics.end();
-        /* empty */) {
-        if ((currentTimestamp - iter->second._timestamp) > iter->second.getTtl()) {
-            _knownMetrics.erase(iter++);
-        } else {
-            ++iter;
+    for (auto it = _knownMetrics.cbegin(); it != _knownMetrics.cend(); /*empty*/) {
+        if (now > (it->second._timestamp + it->second._ttl)) {
+            _knownMetrics.erase(it++); // metric is outdated
+        }
+        else {
+            ++it;
         }
     }
+}
+
+double MetricList::findAndCheck(const std::string& topic) const
+{
+    const auto& it = _knownMetrics.find(topic);
+    if (it == _knownMetrics.cend()) {
+        return std::nan("");
+    }
+
+    uint64_t now = static_cast<uint64_t>(::time(NULL));
+    if (now > (it->second._timestamp + it->second._ttl)) {
+        return std::nan(""); // metric is outdated
+    }
+
+    return it->second._value;
+}
+
+double MetricList::find(const std::string& topic) const
+{
+    const auto& it = _knownMetrics.find(topic);
+    return (it != _knownMetrics.cend()) ? it->second._value : std::nan("");
 }
