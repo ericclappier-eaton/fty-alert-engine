@@ -18,105 +18,51 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 /// @file metricinfo.h
 /// @author Alena Chernikava <AlenaChernikava@Eaton.com>
-/// @brief Very simple class to store information about one metric
+/// @brief Class to store information about one metric
+
 #pragma once
+
 #include <string>
-#include <ctime>
+#include <cstdint>
 
 class MetricInfo
 {
-
 public:
-    std::string generateTopic(void) const
-    {
-        return _source + "@" + _element_name;
-    };
+    MetricInfo() = default;
 
-    MetricInfo()
-        : _value{0}
-        , _timestamp{0}
-        , _ttl{5 * 60} {};
-
-    MetricInfo(const std::string& element_name, const std::string& source, const std::string& units, double value,
-        uint64_t timestamp, const std::string& destination, uint64_t ttl)
-        : _element_name(element_name)
-        , _source(source)
-        , _units(units)
+    MetricInfo(
+        const std::string& element_name,
+        const std::string& source,
+        double value,
+        uint64_t timestamp,
+        uint64_t ttl
+    )
+        : _element_name(element_name) // asset iname
+        , _source(source) // metric type
         , _value(value)
         , _timestamp(timestamp)
-        , _element_destination_name(destination)
-        , _ttl(ttl){};
+        , _ttl(ttl)
+    {}
 
-    double getValue(void) const
-    {
-        return _value;
-    };
+    /// accessors
+    std::string getElementName() const { return _element_name; }
+    std::string getSource() const { return _source; }
+    double getValue() const { return _value; }
+    uint64_t getTimestamp() const { return _timestamp; }
+    uint64_t getTtl() const { return _ttl; }
 
-    std::string getElementName(void) const
+    /// topic name (built)
+    std::string generateTopic() const
     {
-        return _element_name;
-    };
+        return _source + "@" + _element_name; // <metric type>@<asset iname>
+    }
 
-    uint64_t getTimestamp(void) const
-    {
-        return _timestamp;
-    };
-
-    bool isUnknown(void) const
-    {
-        if (_element_name.empty() || _source.empty() || _units.empty()) {
-            return true;
-        }
-        return false;
-    };
-
-    uint64_t getTtl(void) const
-    {
-        return _ttl;
-    };
-
-    std::string getUnits(void) const
-    {
-        return _units;
-    };
-
-    std::string getSource(void) const
-    {
-        return _source;
-    };
-    void setTime(void)
-    {
-        _timestamp = static_cast<uint64_t>(::time(NULL));
-    };
-    void setUnits(const std::string& U)
-    {
-        _units = U;
-    };
-    friend inline bool operator==(const MetricInfo& lhs, const MetricInfo& rhs);
-    friend inline bool operator!=(const MetricInfo& lhs, const MetricInfo& rhs);
-
-    // This class is very close to metric info
-    // So let it use fields directly
     friend class MetricList;
 
 private:
-    std::string _element_name;
-    std::string _source;
-    std::string _units;
-    double      _value;
-    uint64_t    _timestamp;
-    std::string _element_destination_name;
-
-    // time to live [s]
-    uint64_t _ttl;
+    std::string _element_name; /// asset iname
+    std::string _source; /// metric type
+    double      _value{0};
+    uint64_t    _timestamp{0}; /// latest update (epoch time, sec.)
+    uint64_t    _ttl{0}; /// time to live (sec)
 };
-
-inline bool operator==(const MetricInfo& lhs, const MetricInfo& rhs)
-{
-    return (lhs._units == rhs._units && lhs._value == rhs._value);
-}
-
-inline bool operator!=(const MetricInfo& lhs, const MetricInfo& rhs)
-{
-    return !(lhs == rhs);
-}

@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 /// @file metriclist.h
 /// @author Alena Chernikava <AlenaChernikava@Eaton.com>
 /// @brief This class is intended to handle set of current known metrics
+
 #pragma once
 
 #include "metricinfo.h"
@@ -32,11 +33,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 class MetricList
 {
 public:
-    /// Constrocts the empty list
-    MetricList(){};
-
-    /// Destroys the list
-    ~MetricList(){};
+    /// Constructs the empty list
+    MetricList() = default;
 
     /// Adds new metric
     ///
@@ -44,6 +42,20 @@ public:
     /// Also it will update value of last added Metric.
     /// @param[in] metricInfo - metric to add
     void addMetric(const MetricInfo& metricInfo);
+
+    /// Gets the last added metric
+    ///
+    /// @return last added (or updated) metric
+    MetricInfo getLastMetric() const;
+
+    /// Gets metric by the topic
+    /// @param[in] topic - topic we are looking for
+    /// @return MetricInfo       - if metric was found or
+    ///         MetricInfo empty - if metric isn't found
+    MetricInfo getMetricInfo(const std::string& topic) const;
+
+    /// Removes old metrics from the list
+    void removeOldMetrics();
 
     /// Finds a value of the metric in the list and checks if it is still valid.
     ///
@@ -59,24 +71,6 @@ public:
     /// @param[in] topic - topic we are looking for
     /// @return NAN - if metric is not present in the list, value - otherwise
     double find(const std::string& topic) const;
-
-    /// Gets metric by the topic
-    /// @param[in] topic - topic we are looking for
-    /// @return MetricInfo       - if metric was found or
-    ///         MetricInfo empty - if metric isn't found
-    ///                            ( isUnknown() is true)
-    MetricInfo getMetricInfo(const std::string& topic) const;
-
-    /// Removes old metrics from the list
-    void removeOldMetrics(void);
-
-    /// Gets the last added metric
-    ///
-    /// @return last added (or updated) metric
-    MetricInfo getLastMetric(void) const
-    {
-        return _lastInsertedMetric;
-    };
 
 private:
     /// Metric list <topic, Metric>

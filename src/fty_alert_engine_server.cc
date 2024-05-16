@@ -756,7 +756,7 @@ static bool evaluate_metric(mlm_client_t* client, const MetricInfo& triggeringMe
     // try to evaluate them
 
     std::string sTopic;
-    // end_warranty_date is the only "regex rule", for optimisation purpose, use some trick for those.
+    // end_warranty_date is the only "regex rule", for optimization purpose, use some trick for those.
     if (triggeringMetric.getSource() == "end_warranty_date")
         sTopic = "^end_warranty_date@.+";
     else
@@ -837,10 +837,9 @@ static void metric_processing(fty::shm::shmMetrics& result, MetricList& metricLi
             break;
 
         // metric
-        const char* type      = fty_proto_type(element);
-        const char* name      = fty_proto_name(element);
+        const char* type      = fty_proto_type(element); // metric type
+        const char* name      = fty_proto_name(element); // asset iname
         const char* value     = fty_proto_value(element);
-        const char* unit      = fty_proto_unit(element);
         uint32_t    ttl       = fty_proto_ttl(element);
         uint64_t    timestamp = fty_proto_aux_number(element, "time", static_cast<uint64_t>(::time(NULL)));
 
@@ -863,12 +862,11 @@ static void metric_processing(fty::shm::shmMetrics& result, MetricList& metricLi
         //log_debug("Get '%s@%s' (value: %s)", type, name, value);
 
         // Update metricList with new value
-        MetricInfo metric(name, type, unit, dvalue, timestamp, "", ttl);
-        const std::string metricTopic = metric.generateTopic();
-
+        MetricInfo metric(name, type, dvalue, timestamp, ttl);
         metricList.addMetric(metric);
 
         // search if this metric is already evaluated and if this metric is evaluate
+        const std::string metricTopic = metric.generateTopic();
         auto it = evaluateMetrics.find(metricTopic);
         bool exist = it != evaluateMetrics.end();
         bool evaluate = exist ? it->second : false;
@@ -1054,15 +1052,13 @@ void fty_alert_engine_mailbox(zsock_t* pipe, void* args)
         else if (which == pipe) {
             zmsg_t* zmsg = zmsg_recv(pipe);
             char* cmd = zmsg_popstr(zmsg);
+            bool term = false;
 
             if (streq(cmd, "$TERM")) {
                 log_debug("%s: $TERM received", name);
-                zstr_free(&cmd);
-                zmsg_destroy(&zmsg);
-                break;
+                term = true;
             }
-
-            if (streq(cmd, "CONNECT")) {
+            else if (streq(cmd, "CONNECT")) {
                 char* endpoint = zmsg_popstr(zmsg);
                 log_debug("%s: CONNECT received %s", name, endpoint);
                 int rv = mlm_client_connect(client, endpoint, 1000, name);
@@ -1088,7 +1084,8 @@ void fty_alert_engine_mailbox(zsock_t* pipe, void* args)
                     alertConfiguration.setPath(filename);
                     // XXX: somes to subscribe are returned, but not used for now
                     alertConfiguration.readConfiguration();
-                } else {
+                }
+                else {
                     log_error("%s: CONFIG filename is missing", name);
                 }
                 zstr_free(&filename);
@@ -1099,6 +1096,10 @@ void fty_alert_engine_mailbox(zsock_t* pipe, void* args)
 
             zstr_free(&cmd);
             zmsg_destroy(&zmsg);
+
+            if (term) {
+                break;
+            }
         }
         else if (which == mlm_client_msgpipe(client)) {
             zmsg_t* zmsg = mlm_client_recv(client);

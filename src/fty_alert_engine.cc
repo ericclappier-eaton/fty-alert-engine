@@ -23,7 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <czmq.h>
 
 static const char* CONFIG = "/etc/fty-alert-engine/fty-alert-engine.cfg";
-// path to the directory, where rules are stored. Attention: without last slash!
+// path to the directory, where rules are stored. CAUTION: **without** ending slash!
 static const char* PATH = "/var/lib/fty/fty-alert-engine";
 
 // agents name
@@ -43,30 +43,31 @@ int main(int argc, char** argv)
 
     ManageFtyLog::setInstanceFtylog(ENGINE_AGENT_NAME, FTY_COMMON_LOGGING_DEFAULT_CFG);
 
-    int argn;
-    for (argn = 1; argn < argc; argn++) {
-        char* par = NULL;
-        if (argn < argc - 1)
-            par = argv[argn + 1];
+    for (int argn = 1; argn < argc; argn++) {
+        char* arg = argv[argn];
+        char* par = (argn < (argc - 1)) ? argv[argn + 1] : NULL;
 
-        if (streq(argv[argn], "-v") || streq(argv[argn], "--verbose")) {
+        if (streq(arg, "-v") || streq(arg, "--verbose")) {
             ManageFtyLog::getInstanceFtylog()->setVerboseMode();
         }
-        else if (streq(argv[argn], "-h") || streq(argv[argn], "--help")) {
+        else if (streq(arg, "-h") || streq(arg, "--help")) {
             puts("fty-alert-engine [option] [value]");
             puts("   -v|--verbose          verbose output");
             puts("   -h|--help             print help");
             puts("   -c|--config [path]    use custom config file ");
-            return 0;
+            return EXIT_SUCCESS;
         }
-        else if (streq(argv[argn], "-c") || streq(argv[argn], "--config")) {
-            if (par)
-                config = zconfig_load(par);
-            ++argn;
+        else if (streq(arg, "-c") || streq(arg, "--config")) {
+            if (!par) {
+                printf("Missing parameter: %s, run with -h|--help \n", arg);
+                return EXIT_FAILURE;
+            }
+            config = zconfig_load(par);
+            argn++;
         }
         else {
-            printf("Unknown option: %s, run with -h|--help \n", argv[argn]);
-            return 1;
+            printf("Unknown option: %s, run with -h|--help \n", arg);
+            return EXIT_FAILURE;
         }
     }
 
@@ -133,5 +134,5 @@ int main(int argc, char** argv)
     // release audit context
     AuditLogManager::deinit();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
