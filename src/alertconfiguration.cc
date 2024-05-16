@@ -35,20 +35,22 @@ int readRule(std::istream& f, RulePtr& rule)
     // TODO check, that rule actions have unique names (in the rule)
     // TODO check, that values have unique name (in the rule)
     try {
-        cxxtools::SerializationInfo si2;
-        {
-            std::string json_string(std::istreambuf_iterator<char>(f), {});
-            JSON::readFromString(json_string, si2);
-            if (si2.memberCount() == 0)
-                throw std::runtime_error("empty input json document");
-        }
-
         // MVY: SerializationInfo can contain more items, which is not what we
         //     want, pick the first one
         cxxtools::SerializationInfo si;
-        si.addMember(si2.getMember(0).name()) <<= si2.getMember(0);
+        {
+            cxxtools::SerializationInfo si2;
+            std::string json_string(std::istreambuf_iterator<char>(f), {});
+            JSON::readFromString(json_string, si2);
+            if (si2.memberCount() == 0) {
+                throw std::runtime_error("empty input json document");
+            }
 
-        std::unique_ptr<Rule> temp_rule;
+            auto member0 = si2.getMember(0);
+            si.addMember(member0.name()) <<= member0;
+        }
+
+        std::unique_ptr<Rule> temp_rule{nullptr};
 
         {
             temp_rule = std::unique_ptr<Rule>{new RegexRule()};
@@ -104,9 +106,11 @@ int readRule(std::istream& f, RulePtr& rule)
             if (rv == 2)
                 return 2;
         }
+
         log_error("Cannot detect type of the rule");
         return 1;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Cannot parse JSON, ignore it. %s", e.what());
         return 1;
     }
@@ -175,7 +179,8 @@ std::set<std::string> AlertConfiguration::readConfiguration(void)
             _alerts_map.insert(std::make_pair(rulename, std::make_pair(std::move(rule), emptyAlerts)));
             log_debug("file '%s' read correctly", fname.c_str());
         }
-    } catch (std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Can't read configuration: %s", e.what());
         exit(1);
     }
@@ -227,7 +232,8 @@ int AlertConfiguration::addRule(std::istream& newRuleString, std::set<std::strin
 
     try {
         temp_rule->save(getPersistencePath(), temp_rule->name() + ".rule");
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         log_error("Error saving file '%s': %s",
             (getPersistencePath() + temp_rule->name() + ".rule").c_str(),
             e.what());
@@ -323,7 +329,8 @@ int AlertConfiguration::updateRule(std::istream& newRuleString, const std::strin
     // try to save the file, first
     try {
         temp_rule->save(getPersistencePath(), temp_rule->name() + ".rule.new");
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         // if error happend, we didn't lose any previous data
         log_error("Error while saving file '%s': %s", (getPersistencePath() + temp_rule->name() + ".rule.new").c_str(),
             e.what());
@@ -560,7 +567,6 @@ int AlertConfiguration::updateAlert(std::pair<RulePtr, std::vector<PureAlert>>& 
     //    } // end of processing one rule
     return -1;
 }
-
 
 int AlertConfiguration::updateAlertState(
     const char* rule_name, const char* element_name, const char* new_state, PureAlert& pureAlert)
