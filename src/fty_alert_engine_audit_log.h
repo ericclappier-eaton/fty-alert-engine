@@ -49,7 +49,6 @@ private:
 public:
     // Return singleton Audit Ftylog instance
     static Ftylog* getInstance();
-    static void    init(const std::string& serviceName,
-                        const std::string& confFileName = FTY_COMMON_LOGGING_DEFAULT_CFG);
+    static void    init(const std::string& serviceName, const std::string& confFileName = FTY_COMMON_LOGGING_DEFAULT_CFG);
     static void    deinit();
 };

@@ -80,31 +80,40 @@ void LuaRule::code(const std::string& newCode)
     }
 }
 
+static std::string auditValue(const std::string& metric, double value)
+{
+    char sval[32] = "NaN";
+    if (!std::isnan(value)) {
+        snprintf(sval, sizeof(sval), "%0.2lf", value);
+        char* p = strstr(sval, ".00"); // remove .00 decimals
+        if (p) { *p = 0; }
+    }
+    std::string topic = metric.substr(0, metric.find("@"));
+    return topic + "=" + std::string{sval};
+}
+
 int LuaRule::evaluate(const MetricList& metricList, PureAlert& pureAlert)
 {
     log_debug("LuaRule::evaluate %s", _name.c_str());
     int res = 0;
 
-    std::vector<double>      values;
-    std::vector<std::string> auditValues;
-    int                      index = 0;
+    std::string auditValues;
+
+    std::vector<double> values;
+    int index = 0;
     for (const auto& metric : _metrics) {
         double value = metricList.find(metric);
+
+        auditValues += (auditValues.empty() ? "" : ", ") + auditValue(metric, value);
+
         if (std::isnan(value)) {
             log_debug("metric#%d: %s = NaN", index, metric.c_str());
             log_debug("Don't have everything for '%s' yet", _name.c_str());
-            std::stringstream ss;
-            ss << metric.c_str() << " = "
-               << "NaN";
-            auditValues.push_back(ss.str());
             res = RULE_RESULT_UNKNOWN;
             break;
         }
         values.push_back(value);
         log_debug("metric#%d: %s = %lf", index, metric.c_str(), value);
-        std::stringstream ss;
-        ss << metric.c_str() << " = " << value;
-        auditValues.push_back(ss.str());
         index++;
     }
 
@@ -136,16 +145,15 @@ int LuaRule::evaluate(const MetricList& metricList, PureAlert& pureAlert)
             res = RULE_RESULT_UNKNOWN;
         }
     }
-    std::stringstream ss;
-    std::for_each(begin(auditValues), end(auditValues), [&ss](const std::string& elem) {
-        if (ss.str().empty())
-            ss << elem;
-        else
-            ss << ", " << elem;
-    });
-    log_info_alarms_engine_audit("Evaluate rule '%s' [%s] -> %s %s", _name.c_str(), ss.str().c_str(),
-        (res == RULE_RESULT_UNKNOWN) ? ALERT_UNKNOWN : pureAlert._status.c_str(),
-        (res == RULE_RESULT_UNKNOWN) ? "" : pureAlert._severity.c_str());
+
+    std::string auditDesc =
+        (res == RULE_RESULT_UNKNOWN) ? ALERT_UNKNOWN : // UNKNOWN
+        (pureAlert._status == ALERT_RESOLVED) ? ALERT_RESOLVED : // RESOLVED
+        std::string{pureAlert._status + "/" + pureAlert._severity.substr(0, 1)} // ACTIVE/C ACTIVE/W
+    ;
+
+    log_info_alarms_engine_audit("%8s %s (%s)", auditDesc.c_str(), _name.c_str(), auditValues.c_str());
+
     return res;
 }
 
@@ -168,6 +176,7 @@ double LuaRule::luaEvaluate(const std::vector<double>& metrics)
     if (!lua_isnumber(_lstate, -1)) {
         throw std::runtime_error("LUA main function did not returned number!");
     }
+
     result = lua_tonumber(_lstate, -1);
     lua_pop(_lstate, 1);
     return result;
