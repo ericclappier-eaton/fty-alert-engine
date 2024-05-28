@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     bool verbose = false;
 
     for (int i = 1; i < argc; i++) {
-        std::string arg{argv[i]};
+        const std::string arg{argv[i]};
         const char* param = ((i + 1) < argc) ? argv[i + 1] : NULL;
 
         if (arg == "-v" || arg == "--verbose") {
@@ -81,6 +81,8 @@ int main(int argc, char** argv)
 
     // initialize log for auditability
     AuditLogManager::init(ENGINE_AGENT_NAME);
+
+    log_debug ("%s starting...", ENGINE_AGENT_NAME);
 
     // mailbox
     zactor_t* mailbox_actor = zactor_new(fty_alert_engine_mailbox, static_cast<void*>(const_cast<char*>(ENGINE_AGENT_NAME)));
