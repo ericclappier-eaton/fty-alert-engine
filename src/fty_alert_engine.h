@@ -21,8 +21,4 @@
 
 #pragma once
 
-//  Include the project library file
-#include "fty_alert_engine_library.h"
-
-//  Add your own public definitions here, if you need them
 #define RULES_SUBJECT "rfc-evaluator-rules"

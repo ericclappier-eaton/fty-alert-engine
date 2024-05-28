@@ -3,18 +3,16 @@ cmake_policy(VERSION 3.13)
 
 project(fty-alert-engine
     VERSION 1.0.0
-    DESCRIPTION "42ity service evaluating rules written in Lua and producing alerts"
-    LANGUAGES CXX
+    DESCRIPTION "fty-alert-engine"
 )
 
-##############################################################################################################
 find_package(fty-cmake PATHS ${CMAKE_BINARY_DIR}/fty-cmake)
-##############################################################################################################
-
 
 ##############################################################################################################
+
 etn_target(static ${PROJECT_NAME}-static
     SOURCES
+        src/fty_alert_engine.h
         src/alertconfiguration.cc
         src/alertconfiguration.h
         src/autoconfig.cc
@@ -35,9 +33,9 @@ etn_target(static ${PROJECT_NAME}-static
         src/purealert.h
         src/regexrule.h
         src/rule.cc
+        src/rule.h
         src/ruleconfigurator.cc
         src/ruleconfigurator.h
-        src/rule.h
         src/templateruleconfigurator.cc
         src/templateruleconfigurator.h
         src/thresholdrulecomplex.cc
@@ -48,14 +46,14 @@ etn_target(static ${PROJECT_NAME}-static
         src/utils.h
     USES
         czmq
+        mlm
         cxxtools
+        lua5.4
         fty_common
         fty_common_logging
         fty_proto
-        mlm
         fty_shm
         fty-utils
-        lua5.4
         stdc++fs
     PRIVATE
 )
@@ -65,10 +63,8 @@ etn_target(static ${PROJECT_NAME}-static
 etn_target(exe ${PROJECT_NAME}
     SOURCES
         src/fty_alert_engine.cc
-        src/fty_alert_engine.h
     USES
         ${PROJECT_NAME}-static
-        lua5.4
 )
 
 ##############################################################################################################
@@ -76,38 +72,35 @@ etn_target(exe ${PROJECT_NAME}
 set(AGENT_USER "bios")
 set(RULE_TEMPLATES_SHARE_DIR "${CMAKE_INSTALL_FULL_DATAROOTDIR}/bios/fty-autoconfig")
 
-# install systemd config
-
+# install service -> lib/systemd/system/
 etn_configure_file(
     src/conf/${PROJECT_NAME}.service.in
-
     TARGET      ${PROJECT_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/
 )
 
+# install service conf -> lib/tmpfiles.d/
 etn_configure_file(
     ${PROJECT_SOURCE_DIR}/src/conf/fty-alert-engine.conf.in
     TARGET      ${PROJECT_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tmpfiles.d/
 )
 
-#install config file
-
+# install cfg file -> etc/
 etn_configure_file(
     src/conf/fty-alert-engine.cfg.in
     TARGET ${PROJECT_NAME}
     DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/${PROJECT_NAME}/
 )
 
-# rules -> usr/share/bios/fty-autoconfig
+# install rule files -> usr/share/bios/fty-autoconfig
 FILE(GLOB rule_templates "${PROJECT_SOURCE_DIR}/src/rule_templates/*.rule")
 foreach(file ${rule_templates})
   install(FILES ${file} DESTINATION ${RULE_TEMPLATES_SHARE_DIR}/)
 endforeach()
 
 # warranty.rule exception
-install(
-    FILES ${PROJECT_SOURCE_DIR}/src/warranty.rule
+install(FILES ${PROJECT_SOURCE_DIR}/src/warranty.rule
     DESTINATION ${CMAKE_INSTALL_LOCALSTATEDIR}/lib/fty/${PROJECT_NAME}
 )
 
