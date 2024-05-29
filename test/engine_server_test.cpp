@@ -1,6 +1,6 @@
 #include "src/autoconfig.h"
 #include "src/templateruleconfigurator.h"
-#include "src/fty_alert_engine_audit_log.h"
+#include "src/audit_log.h"
 #include "src/fty_alert_engine_server.h"
 #include "src/luarule.h"
 #include <fty_shm.h>
@@ -114,14 +114,11 @@ TEST_CASE("engine_server agent")
     REQUIRE(r == 0);
 
     // initialize logger for auditability
-    AuditLogManager::init("engine-server-test");
+    AuditLog::init("engine-server-test");
     // logs audit, see /etc/fty/ftylog.cfg (requires privileges)
-    log_debug_alarms_engine_audit("engine-server-test audit test %s", "DEBUG");
-    log_info_alarms_engine_audit("engine-server-test audit test %s", "INFO");
-    log_warning_alarms_engine_audit("engine-server-test audit test %s", "WARNING");
-    log_error_alarms_engine_audit("engine-server-test audit test %s", "ERROR");
-    log_fatal_alarms_engine_audit("engine-server-test audit test %s", "FATAL");
-    //AuditLogManager::deinit(); return;
+    audit_log_info("engine-server-test audit test %s", "INFO");
+    audit_log_error("engine-server-test audit test %s", "ERROR");
+    //AuditLog::deinit(); return;
 
     zactor_t* server = zactor_new(mlm_server, static_cast<void*>(const_cast<char*>("Malamute")));
     REQUIRE(server);
@@ -1590,7 +1587,7 @@ TEST_CASE("engine_server agent")
     zactor_destroy(&server);
 
     // release audit context
-    AuditLogManager::deinit();
+    AuditLog::deinit();
 }
 
 TEST_CASE("engine_server utf8eq")

@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
+#include "src/audit_log.h"
 #include <fty_log.h>
-#include "src/fty_alert_engine_audit_log.h"
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -21,8 +21,9 @@ TEST_CASE("audit-test")
     }
 
     ManageFtyLog::setInstanceFtylog ("fty-alert-engine-audit-test");
-    if (verbose)
+    if (verbose) {
         ManageFtyLog::getInstanceFtylog()->setVerboseMode();
+    }
 
     std::string LOG_CONFIG_FILE = "./test/audit/fty-alert-engine-log-test.cfg";
     std::string LOG_OUTPUT_FILE = "/tmp/alarms-audit-test.log";
@@ -33,16 +34,16 @@ TEST_CASE("audit-test")
 
     // initialize log for auditability
     std::cout << "Audit initialization from " << LOG_CONFIG_FILE << std::endl;
-    AuditLogManager::init("alert-engine-test-audit-log", LOG_CONFIG_FILE);
+    AuditLog::init("alert-engine-test-audit-log", LOG_CONFIG_FILE);
 
     std::cout << "Check audit instance" << std::endl;
-    CHECK(AuditLogManager::getInstance() != nullptr);
+    CHECK(AuditLog::getInstance() != nullptr);
 
     // fulfill logs
     std::cout << "Fulfill logs" << std::endl;
     const int NB_LOG = 100000;
     for (int i=0; i < NB_LOG; i++) {
-        log_info_alarms_engine_audit("AUDIT LOG TEST %0.5d", i);
+        audit_log_info("AUDIT LOG TEST %0.5d", i);
     }
 
     // check if file log is created
@@ -81,7 +82,7 @@ TEST_CASE("audit-test")
     remove(LOG_OUTPUT_FILE.c_str());
 
     // release audit context
-    AuditLogManager::deinit();
+    AuditLog::deinit();
 
     printf(" * audit-test : OK\n");
 }

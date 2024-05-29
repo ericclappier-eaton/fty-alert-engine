@@ -17,8 +17,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "autoconfig.h"
+#include "audit_log.h"
 #include "fty_alert_actions.h"
-#include "fty_alert_engine_audit_log.h"
 #include "fty_alert_engine_server.h"
 #include <fty_common_mlm.h>
 #include <czmq.h>
@@ -80,7 +80,7 @@ int main(int argc, char** argv)
     }
 
     // initialize log for auditability
-    AuditLogManager::init(ENGINE_AGENT_NAME);
+    AuditLog::init(ENGINE_AGENT_NAME);
 
     log_debug ("%s starting...", ENGINE_AGENT_NAME);
 
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
     zactor_destroy(&mailbox_actor);
 
     // release audit context
-    AuditLogManager::deinit();
+    AuditLog::deinit();
 
     return EXIT_SUCCESS;
 }

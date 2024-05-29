@@ -19,8 +19,6 @@ etn_target(static ${PROJECT_NAME}-static
         src/autoconfig.h
         src/fty_alert_actions.cc
         src/fty_alert_actions.h
-        src/fty_alert_engine_audit_log.cc
-        src/fty_alert_engine_audit_log.h
         src/fty_alert_engine_server.cc
         src/fty_alert_engine_server.h
         src/luarule.cc
@@ -44,6 +42,8 @@ etn_target(static ${PROJECT_NAME}-static
         src/thresholdrulesimple.h
         src/utils.cc
         src/utils.h
+        src/audit_log.cc
+        src/audit_log.h
     USES
         czmq
         mlm

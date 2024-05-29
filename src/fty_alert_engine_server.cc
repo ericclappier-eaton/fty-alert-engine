@@ -24,6 +24,7 @@
 #include "autoconfig.h"
 
 #include <malamute.h>
+#include <fty_log.h>
 #include <fty_proto.h>
 #include <fty_shm.h>
 #include <fty_common_json.h>
@@ -35,10 +36,6 @@
 #include <regex>
 
 #define METRICS_STREAM "METRICS"
-
-// #include "fty_alert_engine_classes.h"
-
-#include "fty_alert_engine_audit_log.h"
 
 // object use by stream and mailbox messages
 static AlertConfiguration alertConfiguration;

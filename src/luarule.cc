@@ -17,7 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "luarule.h"
-#include "fty_alert_engine_audit_log.h"
+#include "audit_log.h"
 #include <algorithm>
 #include <czmq.h>
 #include <fty_log.h>
@@ -35,7 +35,6 @@ LuaRule::LuaRule(const LuaRule& r)
     globalVariables(r.getGlobalVariables());
     code(r._code);
 }
-
 
 void LuaRule::globalVariables(const std::map<std::string, double>& vars)
 {
@@ -152,7 +151,7 @@ int LuaRule::evaluate(const MetricList& metricList, PureAlert& pureAlert)
         std::string{pureAlert._status + "/" + pureAlert._severity.substr(0, 1)} // ACTIVE/C ACTIVE/W
     ;
 
-    log_info_alarms_engine_audit("%8s %s (%s)", auditDesc.c_str(), _name.c_str(), auditValues.c_str());
+    audit_log_info("%8s %s (%s)", auditDesc.c_str(), _name.c_str(), auditValues.c_str());
 
     return res;
 }
