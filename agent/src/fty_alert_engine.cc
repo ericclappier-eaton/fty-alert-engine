@@ -16,15 +16,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "fty_alert_engine_server.h"
+#include "fty_alert_actions.h"
 #include "autoconfig.h"
 #include "audit_log.h"
-#include "fty_alert_actions.h"
-#include "fty_alert_engine_server.h"
+
 #include <fty_common_mlm.h>
 #include <czmq.h>
 
-// path to the directory, where rules are stored. CAUTION: **without** ending slash!
-static const char* PATH = "/var/lib/fty/fty-alert-engine";
+// path where rules are stored. CAUTION: **without** ending slash!
+static const char* RULES_PATH = "/var/lib/fty/fty-alert-engine";
 
 // agents name
 static const char* ENGINE_AGENT_NAME        = "fty-alert-engine";
@@ -86,7 +87,7 @@ int main(int argc, char** argv)
 
     // mailbox
     zactor_t* mailbox_actor = zactor_new(fty_alert_engine_mailbox, static_cast<void*>(const_cast<char*>(ENGINE_AGENT_NAME)));
-    zstr_sendx(mailbox_actor, "CONFIG", PATH, NULL);
+    zstr_sendx(mailbox_actor, "CONFIG", RULES_PATH, NULL);
     zstr_sendx(mailbox_actor, "CONNECT", MLM_ENDPOINT, NULL);
     zstr_sendx(mailbox_actor, "PRODUCER", FTY_PROTO_STREAM_ALERTS_SYS, NULL);
 
@@ -101,7 +102,7 @@ int main(int argc, char** argv)
 
     // autoconfig
     zactor_t* autoconf_actor = zactor_new(autoconfig, static_cast<void*>(const_cast<char*>(AUTOCONFIG_NAME)));
-    zstr_sendx(autoconf_actor, "CONFIG", PATH, NULL); // state file path
+    zstr_sendx(autoconf_actor, "CONFIG", RULES_PATH, NULL); // presist. state file
     zstr_sendx(autoconf_actor, "CONNECT", MLM_ENDPOINT, NULL);
     zstr_sendx(autoconf_actor, "TEMPLATES_DIR", "/usr/share/bios/fty-autoconfig", NULL); // rule template
     zstr_sendx(autoconf_actor, "CONSUMER", FTY_PROTO_STREAM_ASSETS, ".*", NULL);

@@ -1,0 +1,40 @@
+cmake_minimum_required(VERSION 3.13)
+cmake_policy(VERSION 3.13)
+
+etn_target(static ${PROJECT_NAME}-static
+    PRIVATE
+    SOURCES
+        src/*.h
+        src/*.cc
+    PUBLIC_INCLUDE_DIR
+        src
+    USES
+        czmq
+        mlm
+        cxxtools
+        lua5.4
+        fty_common
+        fty_common_logging
+        fty_proto
+        fty_shm
+        fty-utils
+        stdc++fs
+)
+
+etn_test_target(${PROJECT_NAME}-static
+    CONFIGS
+        test/templates/*
+        test/testrules/*
+        test/audit/*
+    SOURCES
+        test/main.cpp
+        test/utils.cpp
+        test/audit_test.cpp
+        test/autoconfig.cpp
+        test/ruleconfigurator.cpp
+        test/alertconfiguration.cpp
+        test/engine_server_test.cpp
+        test/alert_actions.cpp
+    SUBDIR
+        test
+)

@@ -1074,18 +1074,18 @@ void fty_alert_engine_mailbox(zsock_t* pipe, void* args)
                 zstr_free(&stream);
             }
             else if (streq(cmd, "CONFIG")) {
-                char* filename = zmsg_popstr(zmsg);
-                log_debug("%s: CONFIG received %s", name, filename);
-                if (filename) {
+                char* dirname = zmsg_popstr(zmsg);
+                log_debug("%s: CONFIG received %s", name, dirname);
+                if (dirname) {
                     // Read initial configuration
-                    alertConfiguration.setPath(filename);
+                    alertConfiguration.setPath(dirname);
                     // XXX: somes to subscribe are returned, but not used for now
                     alertConfiguration.readConfiguration();
                 }
                 else {
-                    log_error("%s: CONFIG filename is missing", name);
+                    log_error("%s: CONFIG dirname is missing", name);
                 }
-                zstr_free(&filename);
+                zstr_free(&dirname);
             }
             else {
                 log_debug("%s: command not handled (%s)", name, cmd);

@@ -152,15 +152,13 @@ void Autoconfig::main (zsock_t* pipe, char* name)
         if (which == pipe) {
             zmsg_t* msg = zmsg_recv(pipe);
             char*   cmd = zmsg_popstr(msg);
+            bool term{false};
 
             if (streq(cmd, "$TERM")) {
                 log_debug("%s: $TERM received", name);
-                zstr_free(&cmd);
-                zmsg_destroy(&msg);
-                break;
+                term = true;
             }
-
-            if (streq(cmd, "TEMPLATES_DIR")) {
+            else if (streq(cmd, "TEMPLATES_DIR")) {
                 char* dirname = zmsg_popstr(msg);
                 log_debug("TEMPLATES_DIR received (%s)", dirname);
                 if (dirname) {
@@ -218,6 +216,10 @@ void Autoconfig::main (zsock_t* pipe, char* name)
 
             zstr_free(&cmd);
             zmsg_destroy(&msg);
+
+            if (term) {
+                break;
+            }
             continue;
         }
 

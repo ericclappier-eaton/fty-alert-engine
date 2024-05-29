@@ -20,9 +20,16 @@ TEST_CASE("autoconfig_test")
 
     ManageFtyLog::setInstanceFtylog("autoconfig_test", FTY_COMMON_LOGGING_DEFAULT_CFG);
 
+    {
+        char cwd[PATH_MAX];
+        if (getcwd(cwd, sizeof(cwd)) != NULL) {
+           printf("== Current working dir: %s\n", cwd);
+       }
+    }
+
     // template paths (src/ and tests/)
     std::vector<std::string> testVector = {
-        SELFTEST_DIR_RO "/../src/rule_templates/",
+        SELFTEST_DIR_RO "/../../lib/rule_templates/",
         SELFTEST_DIR_RO "/test/templates/"
     };
 
@@ -32,7 +39,7 @@ TEST_CASE("autoconfig_test")
         TemplateRuleConfigurator templateRuleConfigurator;
         std::vector<std::pair<std::string, std::string>> templates = templateRuleConfigurator.loadAllTemplates();
 
-        printf("number of template rules = '%zu'\n", templates.size());
+        printf("%s : number of template rules = '%zu'\n", templatePath.c_str(), templates.size());
 
         REQUIRE(templates.size() != 0);
 

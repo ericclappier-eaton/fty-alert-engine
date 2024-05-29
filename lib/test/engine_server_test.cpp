@@ -1,3 +1,5 @@
+#include <catch2/catch.hpp>
+
 #include "src/autoconfig.h"
 #include "src/templateruleconfigurator.h"
 #include "src/audit_log.h"
@@ -6,8 +8,6 @@
 #include <fty_shm.h>
 #include <fty_common_json.h>
 #include <cxxtools/serializationinfo.h>
-
-#include <catch2/catch.hpp>
 #include <czmq.h>
 #include <filesystem>
 
@@ -82,8 +82,8 @@ static zmsg_t* s_poll_alert(mlm_client_t* consumer, const char* assetName, int t
 #define SELFTEST_DIR_RO "./test"
 #define SELFTEST_DIR_RW "./selftest_rw"
 
-// templates from src/
-#define SELFTEST_TEMPLATES_DIR_RO "../src/rule_templates/"
+// templates from lib/src/
+#define SELFTEST_TEMPLATES_DIR_RO "./../../lib/rule_templates/"
 
 static const char* MLM_ENDPOINT = "inproc://fty-ag-server-test";
 static const char* SUBJECT_RULES_RFC = "rfc-evaluator-rules";
