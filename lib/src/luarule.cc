@@ -81,14 +81,14 @@ void LuaRule::code(const std::string& newCode)
 
 static std::string auditValue(const std::string& metric, double value)
 {
-    char sval[32] = "NaN";
+    char svalue[32] = "";
     if (!std::isnan(value)) {
-        snprintf(sval, sizeof(sval), "%0.2lf", value);
-        char* p = strstr(sval, ".00"); // remove .00 decimals
-        if (p) { *p = 0; }
+        snprintf(svalue, sizeof(svalue), "%0.2lf", value);
+        char* p = strstr(svalue, ".00");
+        if (p) { *p = 0; } // remove .00 decimals
     }
-    std::string topic = metric.substr(0, metric.find("@"));
-    return topic + "=" + std::string{sval};
+    // <metricName>=<value> format
+    return metric.substr(0, metric.find("@")) + "=" + std::string{svalue};
 }
 
 int LuaRule::evaluate(const MetricList& metricList, PureAlert& pureAlert)
@@ -145,12 +145,12 @@ int LuaRule::evaluate(const MetricList& metricList, PureAlert& pureAlert)
         }
     }
 
+    // log audit alarm
     std::string auditDesc =
         (res == RULE_RESULT_UNKNOWN) ? ALERT_UNKNOWN : // UNKNOWN
         (pureAlert._status == ALERT_RESOLVED) ? ALERT_RESOLVED : // RESOLVED
         std::string{pureAlert._status + "/" + pureAlert._severity.substr(0, 1)} // ACTIVE/C ACTIVE/W
     ;
-
     audit_log_info("%8s %s (%s)", auditDesc.c_str(), _name.c_str(), auditValues.c_str());
 
     return res;
