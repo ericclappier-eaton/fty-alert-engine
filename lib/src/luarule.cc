@@ -151,7 +151,17 @@ int LuaRule::evaluate(const MetricList& metricList, PureAlert& pureAlert)
         (pureAlert._status == ALERT_RESOLVED) ? ALERT_RESOLVED : // RESOLVED
         std::string{pureAlert._status + "/" + pureAlert._severity.substr(0, 1)} // ACTIVE/C ACTIVE/W
     ;
-    audit_log_info("%8s %s (%s)", auditDesc.c_str(), _name.c_str(), auditValues.c_str());
+    std::string alertName{_name};
+    if (alertName == "warranty") {
+        // "warranty" alert exception (no specified asset)
+        // extract asset name from "end_warranty_date" metric (first)
+        if (_metrics.size() > 0) {
+            std::string metric{_metrics[0]};
+            std::string iname{metric.substr(metric.find("@"))};
+            alertName += iname; // completed w/ device @iname
+        }
+    }
+    audit_log_info("%8s %s (%s)", auditDesc.c_str(), alertName.c_str(), auditValues.c_str());
 
     return res;
 }
