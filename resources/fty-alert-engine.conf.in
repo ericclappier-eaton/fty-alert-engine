@@ -1,0 +1,3 @@
+# create runtime directories for @PROJECT_NAME@
+d /var/lib/fty/@PROJECT_NAME@ 0755 @AGENT_USER@ root
+x /var/lib/fty/@PROJECT_NAME@/*

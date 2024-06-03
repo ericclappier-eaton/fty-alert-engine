@@ -17,7 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "luarule.h"
-#include "fty_alert_engine_audit_log.h"
+#include "audit_log.h"
 #include <algorithm>
 #include <czmq.h>
 #include <fty_log.h>
@@ -35,7 +35,6 @@ LuaRule::LuaRule(const LuaRule& r)
     globalVariables(r.getGlobalVariables());
     code(r._code);
 }
-
 
 void LuaRule::globalVariables(const std::map<std::string, double>& vars)
 {
@@ -80,31 +79,40 @@ void LuaRule::code(const std::string& newCode)
     }
 }
 
+static std::string auditValue(const std::string& metric, double value)
+{
+    char svalue[32] = "";
+    if (!std::isnan(value)) {
+        snprintf(svalue, sizeof(svalue), "%0.2lf", value);
+        char* p = strstr(svalue, ".00");
+        if (p) { *p = 0; } // remove .00 decimals
+    }
+    // <metricName>=<value> format
+    return metric.substr(0, metric.find("@")) + "=" + std::string{svalue};
+}
+
 int LuaRule::evaluate(const MetricList& metricList, PureAlert& pureAlert)
 {
     log_debug("LuaRule::evaluate %s", _name.c_str());
     int res = 0;
 
-    std::vector<double>      values;
-    std::vector<std::string> auditValues;
-    int                      index = 0;
+    std::string auditValues;
+
+    std::vector<double> values;
+    int index = 0;
     for (const auto& metric : _metrics) {
         double value = metricList.find(metric);
+
+        auditValues += (auditValues.empty() ? "" : ", ") + auditValue(metric, value);
+
         if (std::isnan(value)) {
             log_debug("metric#%d: %s = NaN", index, metric.c_str());
             log_debug("Don't have everything for '%s' yet", _name.c_str());
-            std::stringstream ss;
-            ss << metric.c_str() << " = "
-               << "NaN";
-            auditValues.push_back(ss.str());
             res = RULE_RESULT_UNKNOWN;
             break;
         }
         values.push_back(value);
         log_debug("metric#%d: %s = %lf", index, metric.c_str(), value);
-        std::stringstream ss;
-        ss << metric.c_str() << " = " << value;
-        auditValues.push_back(ss.str());
         index++;
     }
 
@@ -136,16 +144,25 @@ int LuaRule::evaluate(const MetricList& metricList, PureAlert& pureAlert)
             res = RULE_RESULT_UNKNOWN;
         }
     }
-    std::stringstream ss;
-    std::for_each(begin(auditValues), end(auditValues), [&ss](const std::string& elem) {
-        if (ss.str().empty())
-            ss << elem;
-        else
-            ss << ", " << elem;
-    });
-    log_info_alarms_engine_audit("Evaluate rule '%s' [%s] -> %s %s", _name.c_str(), ss.str().c_str(),
-        (res == RULE_RESULT_UNKNOWN) ? ALERT_UNKNOWN : pureAlert._status.c_str(),
-        (res == RULE_RESULT_UNKNOWN) ? "" : pureAlert._severity.c_str());
+
+    // log audit alarm
+    std::string auditDesc =
+        (res == RULE_RESULT_UNKNOWN) ? ALERT_UNKNOWN : // UNKNOWN
+        (pureAlert._status == ALERT_RESOLVED) ? ALERT_RESOLVED : // RESOLVED
+        std::string{pureAlert._status + "/" + pureAlert._severity.substr(0, 1)} // ACTIVE/C ACTIVE/W
+    ;
+    std::string alertName{_name};
+    if (alertName == "warranty") {
+        // "warranty" alert exception (no specified asset)
+        // extract asset name from "end_warranty_date" metric (first)
+        if (_metrics.size() > 0) {
+            std::string metric{_metrics[0]};
+            std::string iname{metric.substr(metric.find("@"))};
+            alertName += iname; // completed w/ device @iname
+        }
+    }
+    audit_log_info("%8s %s (%s)", auditDesc.c_str(), alertName.c_str(), auditValues.c_str());
+
     return res;
 }
 
@@ -168,6 +185,7 @@ double LuaRule::luaEvaluate(const std::vector<double>& metrics)
     if (!lua_isnumber(_lstate, -1)) {
         throw std::runtime_error("LUA main function did not returned number!");
     }
+
     result = lua_tonumber(_lstate, -1);
     lua_pop(_lstate, 1);
     return result;

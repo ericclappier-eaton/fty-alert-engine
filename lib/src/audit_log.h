@@ -1,7 +1,7 @@
 /*  =========================================================================
-    fty-alert-engine - 42ity service evaluating rules written in Lua and producing alerts
+    audit_log - Manage audit log
 
-    Copyright (C) 2014 - 2020 Eaton
+    Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,8 +21,22 @@
 
 #pragma once
 
-//  Include the project library file
-#include "fty_alert_engine_library.h"
+#include <fty_log.h>
 
-//  Add your own public definitions here, if you need them
-#define RULES_SUBJECT "rfc-evaluator-rules"
+class AuditLog
+{
+private:
+    AuditLog()  = default;
+    ~AuditLog() = default;
+    static Ftylog* _auditLogger;
+
+public:
+    // Return singleton Audit Ftylog instance
+    static Ftylog* getInstance();
+    static void    init(const std::string& serviceName, const std::string& confFileName = FTY_COMMON_LOGGING_DEFAULT_CFG);
+    static void    deinit();
+};
+
+// audit log macros (printf va format)
+#define audit_log_info(...) log_info_log(AuditLog::getInstance(), __VA_ARGS__);
+#define audit_log_error(...) log_error_log(AuditLog::getInstance(), __VA_ARGS__);

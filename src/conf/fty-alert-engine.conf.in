@@ -1,2 +1,0 @@
-d /var/lib/fty/fty-alert-engine 0755 @AGENT_USER@ root
-x /var/lib/fty/fty-alert-engine/*
