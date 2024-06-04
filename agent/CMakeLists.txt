@@ -5,5 +5,6 @@ etn_target(exe ${PROJECT_NAME}
     SOURCES
         src/fty_alert_engine.cc
     USES
+        fty_common_mlm
         ${PROJECT_NAME}-static
 )
