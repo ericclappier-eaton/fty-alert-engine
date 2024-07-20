@@ -23,7 +23,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "rule.h"
 #include <cxxtools/serializationinfo.h>
-#include <fty_log.h>
 
 class ThresholdRuleSimple : public Rule
 {
@@ -35,179 +34,23 @@ public:
         return "threshold";
     }
 
-    // throws -> it is simple threshold but with errors
-    // 0 - ok
-    // 1 - it is not simple threshold rule
-    int fill(const cxxtools::SerializationInfo& si)
-    {
-        _si = si;
-        if (si.findMember("threshold") == NULL) {
-            return 1;
-        }
-        auto threshold = si.getMember("threshold");
-        if (threshold.category() != cxxtools::SerializationInfo::Object) {
-            log_error("Root of json must be an object with property 'threshold'.");
-            throw std::runtime_error("Root of json must be an object with property 'threshold'.");
-        }
+    virtual int fill(const cxxtools::SerializationInfo& si);
 
-        // target
-        auto target = threshold.getMember("target");
-        if (target.category() != cxxtools::SerializationInfo::Value) {
-            return 1;
-        }
-        // rule_source
-        if (threshold.findMember("rule_source") == NULL) {
-            // if key is not there, take default
-            _rule_source = "Manual user input";
-            threshold.addMember("rule_source") <<= _rule_source;
-        } else {
-            auto rule_source = threshold.getMember("rule_source");
-            if (rule_source.category() != cxxtools::SerializationInfo::Value) {
-                throw std::runtime_error("'rule_source' in json must be value.");
-            }
-            rule_source >>= _rule_source;
-        }
-        log_debug("rule_source = %s", _rule_source.c_str());
-        if (_rule_source != "Manual user input") {
-            return 1;
-        }
-        log_debug("it is simple threshold rule");
-
-        si_getValueUtf8(threshold, "target", _metric);
-        si_getValueUtf8(threshold, "rule_name", _name);
-        si_getValueUtf8(threshold, "element", _element);
-
-        // rule_class
-        if (threshold.findMember("rule_class") != NULL) {
-            threshold.getMember("rule_class") >>= _rule_class;
-        }
-        // values
-        // TODO check low_critical < low_warnong < high_warning < hign crtical
-        std::map<std::string, double> tmp_values;
-        auto                          values = threshold.getMember("values");
-        if (values.category() != cxxtools::SerializationInfo::Array) {
-            log_error("parameter 'values' in json must be an array.");
-            throw std::runtime_error("parameter 'values' in json must be an array");
-        }
-        values >>= tmp_values;
-        globalVariables(tmp_values);
-
-        // outcomes
-        auto outcomes = threshold.getMember("results");
-        if (outcomes.category() != cxxtools::SerializationInfo::Array) {
-            log_error("parameter 'results' in json must be an array.");
-            throw std::runtime_error("parameter 'results' in json must be an array.");
-        }
-        outcomes >>= _outcomes;
-        return 0;
-    }
-
-    int evaluate(const MetricList& metricList, PureAlert& pureAlert)
-    {
-        // ASSUMPTION: constants are in values
-        //  high_critical
-        //  high_warning
-        //  low_warning
-        //  low_critical
-
-#if 0 //DBG, trace _outcomes
-        log_debug("%s: outcomes (size: %zu)", _name.c_str(), _outcomes.size());
-        for (auto& outcome : _outcomes) {
-            log_debug("%s: %s", outcome.first.c_str(), outcome.second.str().c_str());
-        }
-#endif
-
-        const auto GV = getGlobalVariables();
-
-        auto valueToCheck = GV.find("high_critical");
-        if (valueToCheck != GV.cend()) {
-            if (valueToCheck->second < metricList.getLastMetric().getValue()) {
-                auto outcome = _outcomes.find("high_critical");
-                if (outcome == _outcomes.cend()) {
-                    log_error("%s: outcome high_critical is missing", _name.c_str());
-                }
-                else {
-                    pureAlert           = PureAlert(ALERT_START, metricList.getLastMetric().getTimestamp(),
-                        outcome->second._description, this->_element, this->_rule_class);
-                    pureAlert._severity = outcome->second._severity;
-                    pureAlert._actions  = outcome->second._actions;
-                    return 0;
-                }
-            }
-        }
-
-        valueToCheck = GV.find("high_warning");
-        if (valueToCheck != GV.cend()) {
-            if (valueToCheck->second < metricList.getLastMetric().getValue()) {
-                auto outcome = _outcomes.find("high_warning");
-                if (outcome == _outcomes.cend()) {
-                    log_error("%s: outcome high_warning is missing", _name.c_str());
-                }
-                else {
-                    pureAlert           = PureAlert(ALERT_START, metricList.getLastMetric().getTimestamp(),
-                        outcome->second._description, this->_element, this->_rule_class);
-                    pureAlert._severity = outcome->second._severity;
-                    pureAlert._actions  = outcome->second._actions;
-                    return 0;
-                }
-            }
-        }
-
-        valueToCheck = GV.find("low_critical");
-        if (valueToCheck != GV.cend()) {
-            if (valueToCheck->second > metricList.getLastMetric().getValue()) {
-                auto outcome = _outcomes.find("low_critical");
-                if (outcome == _outcomes.cend()) {
-                    log_error("%s: outcome low_critical is missing", _name.c_str());
-                }
-                else {
-                    pureAlert           = PureAlert(ALERT_START, metricList.getLastMetric().getTimestamp(),
-                        outcome->second._description, this->_element, this->_rule_class);
-                    pureAlert._severity = outcome->second._severity;
-                    pureAlert._actions  = outcome->second._actions;
-                    return 0;
-                }
-            }
-        }
-
-        valueToCheck = GV.find("low_warning");
-        if (valueToCheck != GV.cend()) {
-            if (valueToCheck->second > metricList.getLastMetric().getValue()) {
-                auto outcome = _outcomes.find("low_warning");
-                if (outcome == _outcomes.cend()) {
-                    log_error("%s: outcome low_warning is missing", _name.c_str());
-                }
-                else {
-                    pureAlert           = PureAlert(ALERT_START, metricList.getLastMetric().getTimestamp(),
-                        outcome->second._description, this->_element, this->_rule_class);
-                    pureAlert._severity = outcome->second._severity;
-                    pureAlert._actions  = outcome->second._actions;
-                    return 0;
-                }
-            }
-        }
-
-        // if we are here -> no alert was detected
-        // TODO actions
-        pureAlert = PureAlert(
-            ALERT_RESOLVED, metricList.getLastMetric().getTimestamp(), "ok", this->_element, this->_rule_class);
-
-        pureAlert.print();
-
-        return 0;
-    };
+    virtual int evaluate(const MetricList& metricList, PureAlert& pureAlert);
 
     bool isTopicInteresting(const std::string& topic) const
     {
         return (_metric == topic);
-    };
+    }
 
     std::vector<std::string> getNeededTopics(void) const
     {
         return {_metric};
-    };
+    }
 
 private:
+    void log_audit_alarm(const MetricInfo& metric, const PureAlert& pureAlert) const;
+
     // needed metric topic
     std::string _metric;
 };
