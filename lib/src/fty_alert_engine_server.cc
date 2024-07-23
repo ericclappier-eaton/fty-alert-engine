@@ -873,13 +873,23 @@ static void metric_processing(fty::shm::shmMetrics& result, MetricList& metricLi
 void fty_alert_engine_stream(zsock_t* pipe, void* args)
 {
     char* name = static_cast<char*>(args);
-    assert(name);
+    if (!name) {
+        log_error("args is NULL");
+        return;
+    }
 
     mlm_client_t* client = mlm_client_new();
-    assert(client);
+    if (!client) {
+        log_error("mlm_client_new failed");
+        return;
+    }
 
     zpoller_t* poller = zpoller_new(pipe, mlm_client_msgpipe(client), NULL);
-    assert(poller);
+    if (!poller) {
+        log_error("zpoller_new failed");
+        mlm_client_destroy(&client);
+        return;
+    }
 
     zsock_signal(pipe, 0);
     log_info("Actor %s started", name);
@@ -892,8 +902,8 @@ void fty_alert_engine_stream(zsock_t* pipe, void* args)
     while (!zsys_interrupted)
     {
         // polling (rules evaluation)
-        int64_t timeCurrent = zclock_mono() - timeLastPoll;
-        if (timeCurrent >= timeout) {
+        int64_t elapsed = zclock_mono() - timeLastPoll;
+        if (elapsed >= timeout) {
             timeLastPoll = zclock_mono();
             metricList.removeOldMetrics();
 
@@ -906,7 +916,7 @@ void fty_alert_engine_stream(zsock_t* pipe, void* args)
             timeout = int64_t(fty_get_polling_interval()) * 1000;
         }
         else {
-            timeout -= timeCurrent;
+            timeout -= elapsed;
         }
 
         void* which = zpoller_wait(poller, static_cast<int>(timeout));
@@ -969,13 +979,23 @@ void fty_alert_engine_stream(zsock_t* pipe, void* args)
 void fty_alert_engine_mailbox(zsock_t* pipe, void* args)
 {
     char* name = static_cast<char*>(args);
-    assert(name);
+    if (!name) {
+        log_error("args is NULL");
+        return;
+    }
 
     mlm_client_t* client = mlm_client_new();
-    assert(client);
+    if (!client) {
+        log_error("mlm_client_new failed");
+        return;
+    }
 
     zpoller_t* poller = zpoller_new(pipe, mlm_client_msgpipe(client), NULL);
-    assert(poller);
+    if (!poller) {
+        log_error("zpoller_new failed");
+        mlm_client_destroy(&client);
+        return;
+    }
 
     zsock_signal(pipe, 0);
     log_info("Actor %s started", name);
