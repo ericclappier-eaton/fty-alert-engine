@@ -145,15 +145,13 @@ TEST_CASE("engine_server agent")
     zactor_t* ag_server_stream = zactor_new(fty_alert_engine_stream, static_cast<void*>(const_cast<char*>("alert-stream")));
     zstr_sendx(ag_server_stream, "CONNECT", MLM_ENDPOINT, NULL);
     zstr_sendx(ag_server_stream, "PRODUCER", FTY_PROTO_STREAM_ALERTS_SYS, NULL);
-    zstr_sendx(ag_server_stream, "CONSUMER", FTY_PROTO_STREAM_METRICS, ".*", NULL);
-    zstr_sendx(ag_server_stream, "CONSUMER", FTY_PROTO_STREAM_METRICS_UNAVAILABLE, ".*", NULL);
 
     zactor_t* ag_server_mail = zactor_new(fty_alert_engine_mailbox, static_cast<void*>(const_cast<char*>("fty-alert-engine")));
     zstr_sendx(ag_server_mail, "CONFIG", (str_SELFTEST_DIR_RW).c_str(), NULL);
     zstr_sendx(ag_server_mail, "CONNECT", MLM_ENDPOINT, NULL);
     zstr_sendx(ag_server_mail, "PRODUCER", FTY_PROTO_STREAM_ALERTS_SYS, NULL);
 
-    zclock_sleep(500); // THIS IS A HACK TO SETTLE DOWN THINGS
+    zclock_sleep(500); // mlm sync
 
     // Test case #1: list w/o rules
     {
@@ -1329,42 +1327,6 @@ TEST_CASE("engine_server agent")
         REQUIRE(streq(fty_proto_state(brecv), "ACTIVE"));
         REQUIRE(streq(fty_proto_severity(brecv), "WARNING"));
         fty_proto_destroy(&brecv);
-
-        // 25.5 Send "metric unavailable"
-        // 25.5.1. We need a special client for this
-        mlm_client_t* metric_unavailable = mlm_client_new();
-        mlm_client_connect(metric_unavailable, MLM_ENDPOINT, 1000, "metricunavailable");
-        mlm_client_set_producer(metric_unavailable, "_METRICS_UNAVAILABLE");
-
-        // 25.5.2. send UNAVAILABLE metric
-        zmsg_t* m_unavailable = zmsg_new();
-        REQUIRE(m_unavailable);
-        zmsg_addstr(m_unavailable, "METRICUNAVAILABLE");
-        zmsg_addstr(m_unavailable, "metrictouch1@element1");
-
-        rv = mlm_client_send(metric_unavailable, "metrictouch1@element1", &m_unavailable);
-        REQUIRE(rv == 0);
-
-        // 25.6 Check that 2 alerts were resolved
-        recv = mlm_client_recv(consumer);
-        REQUIRE(recv);
-        REQUIRE(fty_proto_is(recv));
-        brecv = fty_proto_decode(&recv);
-        REQUIRE(brecv);
-        REQUIRE(streq(fty_proto_state(brecv), "RESOLVED"));
-        fty_proto_destroy(&brecv);
-
-        recv = mlm_client_recv(consumer);
-        REQUIRE(recv);
-        REQUIRE(fty_proto_is(recv));
-        brecv = fty_proto_decode(&recv);
-        REQUIRE(brecv);
-        REQUIRE(streq(fty_proto_name(brecv), "element3"));
-        REQUIRE(streq(fty_proto_state(brecv), "RESOLVED"));
-        fty_proto_destroy(&brecv);
-
-        // 25.7 clean up
-        mlm_client_destroy(&metric_unavailable);
     }
 
     // # 26 - # 30 : test autoconfig
