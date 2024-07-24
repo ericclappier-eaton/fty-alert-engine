@@ -95,10 +95,6 @@ int main(int argc, char** argv)
     zactor_t* stream_actor = zactor_new(fty_alert_engine_stream, static_cast<void*>(const_cast<char*>(ENGINE_AGENT_NAME_STREAM)));
     zstr_sendx(stream_actor, "CONNECT", MLM_ENDPOINT, NULL);
     zstr_sendx(stream_actor, "PRODUCER", FTY_PROTO_STREAM_ALERTS_SYS, NULL);
-    // zstr_sendx(stream_actor, "CONSUMER", FTY_PROTO_STREAM_METRICS, ".*", NULL);
-    zstr_sendx(stream_actor, "CONSUMER", FTY_PROTO_STREAM_METRICS_UNAVAILABLE, ".*", NULL);
-    zstr_sendx(stream_actor, "CONSUMER", FTY_PROTO_STREAM_METRICS_SENSOR, "status.*", NULL);
-    zstr_sendx(stream_actor, "CONSUMER", FTY_PROTO_STREAM_LICENSING_ANNOUNCEMENTS, ".*", NULL);
 
     // autoconfig
     zactor_t* autoconf_actor = zactor_new(autoconfig, static_cast<void*>(const_cast<char*>(AUTOCONFIG_NAME)));

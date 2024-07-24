@@ -731,18 +731,6 @@ static void touch_rule(mlm_client_t* client, const char* rule_name, AlertConfigu
     }
 }
 
-static void touch_rules_for_metric(mlm_client_t* client, const char* metric_topic, AlertConfiguration& ac)
-{
-    mtxAlertConfig.lock();
-    const std::vector<std::string> rules_of_metric = ac.getRulesByMetric(metric_topic);
-    mtxAlertConfig.unlock();
-
-    const bool send_reply = false;
-    for (const auto& rulename : rules_of_metric) {
-        touch_rule(client, rulename.c_str(), ac, send_reply);
-    }
-}
-
 static bool evaluate_metric(mlm_client_t* client, const MetricInfo& triggeringMetric, const MetricList& knownMetricValues,
     AlertConfiguration& ac)
 {
@@ -885,13 +873,23 @@ static void metric_processing(fty::shm::shmMetrics& result, MetricList& metricLi
 void fty_alert_engine_stream(zsock_t* pipe, void* args)
 {
     char* name = static_cast<char*>(args);
-    assert(name);
+    if (!name) {
+        log_error("args is NULL");
+        return;
+    }
 
     mlm_client_t* client = mlm_client_new();
-    assert(client);
+    if (!client) {
+        log_error("mlm_client_new failed");
+        return;
+    }
 
     zpoller_t* poller = zpoller_new(pipe, mlm_client_msgpipe(client), NULL);
-    assert(poller);
+    if (!poller) {
+        log_error("zpoller_new failed");
+        mlm_client_destroy(&client);
+        return;
+    }
 
     zsock_signal(pipe, 0);
     log_info("Actor %s started", name);
@@ -904,8 +902,8 @@ void fty_alert_engine_stream(zsock_t* pipe, void* args)
     while (!zsys_interrupted)
     {
         // polling (rules evaluation)
-        int64_t timeCurrent = zclock_mono() - timeLastPoll;
-        if (timeCurrent >= timeout) {
+        int64_t elapsed = zclock_mono() - timeLastPoll;
+        if (elapsed >= timeout) {
             timeLastPoll = zclock_mono();
             metricList.removeOldMetrics();
 
@@ -918,7 +916,7 @@ void fty_alert_engine_stream(zsock_t* pipe, void* args)
             timeout = int64_t(fty_get_polling_interval()) * 1000;
         }
         else {
-            timeout -= timeCurrent;
+            timeout -= elapsed;
         }
 
         void* which = zpoller_wait(poller, static_cast<int>(timeout));
@@ -955,17 +953,6 @@ void fty_alert_engine_stream(zsock_t* pipe, void* args)
                 }
                 zstr_free(&stream);
             }
-            else if (streq(cmd, "CONSUMER")) {
-                char* stream = zmsg_popstr(msg);
-                char* pattern = zmsg_popstr(msg);
-                log_debug("CONSUMER received (stream: %s, pattern: %s)", stream, pattern);
-                int rv = mlm_client_set_consumer(client, stream, pattern);
-                if (rv == -1) {
-                    log_error("%s: can't set consumer on stream '%s', '%s'", name, stream, pattern);
-                }
-                zstr_free(&pattern);
-                zstr_free(&stream);
-            }
             else {
                 log_debug("%s: command not handled (%s)", name, cmd);
             }
@@ -978,40 +965,9 @@ void fty_alert_engine_stream(zsock_t* pipe, void* args)
             }
         }
         else if (which == mlm_client_msgpipe(client)) {
-            zmsg_t* zmsg  = mlm_client_recv(client);
-            const char* sender = mlm_client_sender(client);
-            const char* subject = mlm_client_subject(client);
-
-            if (streq(sender, "fty_info_linuxmetrics")) {
-                log_trace("%s: Drop message (sender: '%s', subject: %s)", name, sender, subject);
-            }
-            else if (!fty_proto_is(zmsg)) {
-                // Here we can have a message with arbitrary topic, but according protocol
-                // first frame must be one of the following:
-                //  * METRIC_UNAVAILABLE
-
-                char* cmd = zmsg_popstr(zmsg);
-
-                log_trace("%s: Recv non proto message (sender: '%s', subject: %s, command: %s)",
-                    name, sender, subject, cmd);
-
-                if (cmd && streq(cmd, "METRICUNAVAILABLE")) {
-                    char* metrictopic = zmsg_popstr(zmsg);
-                    if (metrictopic) {
-                        log_debug("%s: touch_rules_for_metric %s", name, metrictopic);
-                        touch_rules_for_metric(client, metrictopic, alertConfiguration);
-                    } else {
-                        log_debug("%s: Received stream command '%s', but message has bad format", name, cmd);
-                    }
-                    zstr_free(&metrictopic);
-                } else {
-                    log_debug("%s: Unexcepted stream message received with command : %s", name, cmd);
-                }
-
-                zstr_free(&cmd);
-            }
-
-            zmsg_destroy(&zmsg);
+            // normally never reached
+            zmsg_t* msg = mlm_client_recv(client);
+            zmsg_destroy(&msg);
         }
     }
 
@@ -1023,13 +979,23 @@ void fty_alert_engine_stream(zsock_t* pipe, void* args)
 void fty_alert_engine_mailbox(zsock_t* pipe, void* args)
 {
     char* name = static_cast<char*>(args);
-    assert(name);
+    if (!name) {
+        log_error("args is NULL");
+        return;
+    }
 
     mlm_client_t* client = mlm_client_new();
-    assert(client);
+    if (!client) {
+        log_error("mlm_client_new failed");
+        return;
+    }
 
     zpoller_t* poller = zpoller_new(pipe, mlm_client_msgpipe(client), NULL);
-    assert(poller);
+    if (!poller) {
+        log_error("zpoller_new failed");
+        mlm_client_destroy(&client);
+        return;
+    }
 
     zsock_signal(pipe, 0);
     log_info("Actor %s started", name);
