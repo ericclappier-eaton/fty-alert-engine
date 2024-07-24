@@ -293,21 +293,10 @@ where command is one of:
 * DELETE
 *
 
-### Stream METRICS\_UNAVAILABLE
-
-This stream is used to signal that certain metric is no longer available (for example because corresponding asset was removed).
-
-Every message on the stream METRICS\_UNAVAILABLE MUST be of the format METRICUNAVAILABLE/<topic>.
-
 ### Stream subscriptions
-
-Actor fty-alert-engine-server is subscribed to streams METRICS, METRICS\_UNAVAILABLE and METRICS\_SENSOR.
-On each METRIC message, it updates metric cache, removes old metrics (older than their TTL) and re-evaluates all rules dependent on this metric.
-On each METRICUNAVAILABLE message, it finds all the rules dependent on this metric and resolves all the alerts triggered by them. For each found rule, it sends back a response message from TOUCH protocol.
 
 Actor fty-autoconfig is subscribed to stream ASSETS and on each ASSET message, it updates asset cache.
 
 Actor fty-alert-actions is subscribed to streams ASSETS and ALERTS.
 On each ASSET message, it updates asset cache.
 On each ALERT message, it updates alert cache.
-
