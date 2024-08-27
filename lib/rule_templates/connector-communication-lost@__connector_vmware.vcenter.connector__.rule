@@ -1,0 +1,20 @@
+{
+    "flexible" : {
+        "name"          : "communication-lost@__name__",
+        "description"   : "TRANSLATE_LUA(The connector is out of communication)",
+        "rule_cat"      : ["CAT_ALL", "CAT_OTHER"],
+        "metrics"       : ["communication-lost"],
+        "assets"        : ["__name__"],
+        "results"       :  {
+            "high_warning"  : { "action" : [ ] }
+        },
+        "evaluation"    : "
+            function main(i1)
+                if i1 == 'OK' then
+                    return OK, string.format('{ \"key\": \"TRANSLATE_LUA(The connector {{ename}} is good.)\", \"variables\": {\"ename\": {\"value\" : \"__ename__\"}}}')
+                end
+                return WARNING, string.format('{ \"key\": \"TRANSLATE_LUA(The connector {{ename}} is out of communication)\", \"variables\": {\"ename\": {\"value\" : \"__ename__\"}}}')
+            end
+        "
+    }
+}
