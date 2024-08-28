@@ -32,8 +32,6 @@
 
 #define RULES_SUBJECT "rfc-evaluator-rules"
 
-#define TIMEOUT 1000
-
 struct AutoConfigurationInfo
 {
     std::string                        type;
@@ -106,189 +104,32 @@ void autoconfig(zsock_t* pipe, void* args);
 class Autoconfig
 {
 public:
-    explicit Autoconfig(const char* agentName)
-    {
-        _agentName = agentName;
-    };
-    explicit Autoconfig(const std::string& agentName)
-    {
-        _agentName = agentName;
-    };
-    virtual ~Autoconfig()
-    {
-        mlm_client_destroy(&_client);
-    };
+    Autoconfig(const std::string& agentName) : _agentName(agentName) {}
+    virtual ~Autoconfig() { mlm_client_destroy(&_client); }
 
     static std::string StateFile;     //!< file&path where Autoconfig state is saved
     static std::string StateFilePath; //!< fully-qualified path to dir where Autoconfig state is saved
     static std::string RuleFilePath;  //!< fully-qualified path to dir where Autoconfig rule templates are saved
     static std::string AlertEngineName;
+
     const std::string  getEname(const std::string& iname);
 
-    int send(const char* subject, zmsg_t** msg_p)
-    {
-        return mlm_client_send(_client, subject, msg_p);
-    };
-    // replyto == sendto
-    int sendto(const char* address, const char* subject, zmsg_t** send_p)
-    {
-        return mlm_client_sendto(_client, address, subject, NULL, TIMEOUT, send_p);
-    };
-    int sendfor(const char* address, const char* subject, zmsg_t** send_p)
-    {
-        return mlm_client_sendfor(_client, address, subject, NULL, TIMEOUT, send_p);
-    };
-    zmsg_t* recv()
-    {
-        return mlm_client_recv(_client);
-    };
-    zmsg_t* recv_wait(int timeout)
-    {
-        if (!_client) {
-            return NULL;
-        }
-
-        zsock_t* pipe = mlm_client_msgpipe(_client);
-        if (!pipe) {
-            return NULL;
-        }
-
-        zmsg_t*    zmsg   = NULL;
-        zsock_t*   which  = NULL;
-        zpoller_t* poller = zpoller_new(pipe, NULL);
-        if (!poller) {
-            return NULL;
-        }
-
-        which = static_cast<zsock_t*>(zpoller_wait(poller, timeout));
-        if (which) {
-            zmsg = mlm_client_recv(_client);
-        }
-        zpoller_destroy(&poller);
-
-        if (!zmsg) {
-            return NULL;
-        }
-        return zmsg;
-    }
-
-    int set_producer(const char* stream)
-    {
-        return mlm_client_set_producer(_client, stream);
-    };
-    int set_consumer(const char* stream, const char* pattern)
-    {
-        return mlm_client_set_consumer(_client, stream, pattern);
-    };
-    const char* command()
-    {
-        return mlm_client_command(_client);
-    };
-    int status()
-    {
-        return mlm_client_status(_client);
-    };
-    const char* reason()
-    {
-        return mlm_client_reason(_client);
-    };
-    const char* address()
-    {
-        return mlm_client_address(_client);
-    };
-    const char* sender()
-    {
-        return mlm_client_sender(_client);
-    };
-    const char* subject()
-    {
-        return mlm_client_subject(_client);
-    };
-    zmsg_t* content()
-    {
-        return mlm_client_content(_client);
-    };
-    zactor_t* actor()
-    {
-        return mlm_client_actor(_client);
-    };
-    zsock_t* msgpipe()
-    {
-        return mlm_client_msgpipe(_client);
-    };
-    mlm_client_t* client()
-    {
-        return _client;
-    };
-
-    void timeout(const int timeoutms)
-    {
-        _timeout = timeoutms;
-    };
-    int timeout()
-    {
-        return _timeout;
-    };
-
-    std::string agentName()
-    {
-        return _agentName;
-    };
-    void agentName(const std::string newname)
-    {
-        _agentName = newname;
-    }
-    void onStart()
-    {
-        loadState();
-        setPollingInterval();
-    };
-    void onEnd()
-    {
-        cleanupState();
-        saveState();
-    };
-    void         onSend(fty_proto_t** message);
-    virtual void onReply(zmsg_t** message)
-    {
-        zmsg_destroy(message);
-    };
+    void main(zsock_t* pipe, char* name);
+    void onSend(fty_proto_t** message);
     void onPoll();
 
-    void main(zsock_t* pipe, char* name);
-    bool connect(const char* endpoint, const char* stream = NULL, const char* pattern = NULL)
-    {
-        if (endpoint == NULL || _agentName.empty())
-            return false;
-        if (_client)
-            mlm_client_destroy(&_client);
-        _client = mlm_client_new();
-        if (_client == NULL)
-            return false;
-        if (mlm_client_connect(_client, endpoint, TIMEOUT, _agentName.c_str()) != 0) {
-            mlm_client_destroy(&_client);
-            return false;
-        }
-
-        if (stream) {
-            if (set_producer(stream) < 0) {
-                mlm_client_destroy(&_client);
-                return false;
-            }
-            if (pattern) {
-                if (set_consumer(stream, pattern) < 0) {
-                    mlm_client_destroy(&_client);
-                    return false;
-                }
-            }
-        }
-        return true;
-    };
     void run(zsock_t* pipe, char* name)
     {
-        onStart();
+        //onStart
+        loadState();
+        setPollingInterval();
+
+        // main loop
         main(pipe, name);
-        onEnd();
+
+        //onEnd
+        cleanupState();
+        saveState();
     }
 
     AutoConfigurationInfo configurableDevicesGet(const std::string& assetName);
@@ -299,21 +140,19 @@ private:
     std::map<std::string, AutoConfigurationInfo> _configurableDevices;
     std::recursive_mutex _configurableDevicesMutex; // multi-thread access protection
 
-    void                                         handleReplies(zmsg_t* message);
-    void                                         setPollingInterval();
-    void                                         cleanupState();
-    void                                         saveState();
-    void                                         loadState();
+    void setPollingInterval();
+    void cleanupState();
+    void saveState();
+    void loadState();
 
     // list of containers with their friendly names
     std::map<std::string, std::string> _containers; // iname | ename
-    int64_t                            _timestamp;
 
 protected:
-    mlm_client_t*          _client     = NULL;
-    int                    _exitStatus = 0;
-    int                    _timeout    = 2000;
-    std::string            _agentName;
+    std::string   _agentName;
+    mlm_client_t* _client{NULL};
+    int           _timeout{2000};
+
     std::list<std::string> getElemenListMatchTemplate(std::string template_name);
     void                   listTemplates(const char* correlation_id, const char* type);
 };
