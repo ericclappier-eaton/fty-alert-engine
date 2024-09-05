@@ -30,6 +30,8 @@
 
 #define AUTOCONFIG "AUTOCONFIG"
 
+#define TIMEOUT 1000
+
 std::string Autoconfig::StateFilePath;
 std::string Autoconfig::RuleFilePath;
 std::string Autoconfig::StateFile;
@@ -109,18 +111,19 @@ inline void operator>>=(const cxxtools::SerializationInfo& si, AutoConfiguration
 
 void Autoconfig::main (zsock_t* pipe, char* name)
 {
-    if (_client)
+    if (_client) {
         mlm_client_destroy(&_client);
+    }
     _client = mlm_client_new();
     assert(_client);
 
-    zpoller_t* poller = zpoller_new(pipe, msgpipe(), NULL);
+    zpoller_t* poller = zpoller_new(pipe, mlm_client_msgpipe(_client), NULL);
     assert(poller);
 
     log_info("%s started", name);
     zsock_signal(pipe, 0);
 
-    _timestamp = zclock_mono();
+    int64_t _timestamp = zclock_mono();
 
     while (!zsys_interrupted) {
 
@@ -225,16 +228,20 @@ void Autoconfig::main (zsock_t* pipe, char* name)
 
         //TODO rewrite that crappy message processing
 
-        zmsg_t* message = recv();
+        zmsg_t* message = mlm_client_recv(_client);
+        const char* command = mlm_client_command(_client);
+        const char* subject = mlm_client_subject(_client);
+        const char* sender = mlm_client_sender(_client);
+
         if (!message) {
             log_warning(
                 "recv () returned NULL; zsys_interrupted == '%s'; command = '%s', subject = '%s', sender = '%s'",
-                zsys_interrupted ? "true" : "false", command(), subject(), sender());
+                zsys_interrupted ? "true" : "false", command, subject, sender);
         }
         else if (fty_proto_is(message)) {
             fty_proto_t* bmessage = fty_proto_decode(&message);
             if (!bmessage) {
-                log_error("can't decode message with subject %s, ignoring", subject());
+                log_error("can't decode message with subject %s, ignoring", subject);
             }
             else if (fty_proto_id(bmessage) == FTY_PROTO_ASSET) {
                 if (!streq(fty_proto_operation(bmessage), FTY_PROTO_ASSET_OP_INVENTORY)) {
@@ -242,13 +249,13 @@ void Autoconfig::main (zsock_t* pipe, char* name)
                 }
             } else {
                 log_warning("Weird fty_proto msg received, id = '%d', command = '%s', subject = '%s', sender = '%s'",
-                    fty_proto_id(bmessage), command(), subject(), sender());
+                    fty_proto_id(bmessage), command, subject, sender);
             }
             fty_proto_destroy(&bmessage);
         }
         else {
             // this should be a message from ALERT_ENGINE_NAME (fty-alert-engine or fty-alert-flexible)
-            if (streq(sender(), "fty-alert-engine") || streq(sender(), "fty-alert-flexible")) {
+            if (streq(sender, "fty-alert-engine") || streq(sender, "fty-alert-flexible")) {
                 char* reply = zmsg_popstr(message);
                 if (streq(reply, "OK")) {
                     if (zmsg_size(message) == 1) {
@@ -265,7 +272,7 @@ void Autoconfig::main (zsock_t* pipe, char* name)
                         zstr_free(&details);
                     } else
                         log_warning("Unexpected message received, command = '%s', subject = '%s', sender = '%s'",
-                            command(), subject(), sender());
+                            command, subject, sender);
                 }
                 zstr_free(&reply);
             } else {
@@ -277,8 +284,8 @@ void Autoconfig::main (zsock_t* pipe, char* name)
                     zstr_free(&correl_id);
                     zstr_free(&filter);
                 } else {
-                    log_warning("Unexpected message received, command = '%s', subject = '%s', sender = '%s'", command(),
-                        subject(), sender());
+                    log_warning("Unexpected message received, command = '%s', subject = '%s', sender = '%s'",
+                        command, subject, sender);
                 }
                 zstr_free(&cmd);
             }
@@ -303,6 +310,8 @@ void Autoconfig::onSend(fty_proto_t** message)
 {
     if (!message || !*message)
         return;
+
+    // logDebug("== OnSend"); fty_proto_print(*message);
 
     std::string device_name (fty_proto_name (*message));
     auto currentInfo = configurableDevicesGet(device_name);
@@ -393,7 +402,8 @@ void Autoconfig::onSend(fty_proto_t** message)
             zmsg_t* msg = zmsg_new();
             zmsg_addstr(msg, "DELETE_ELEMENT");
             zmsg_addstr(msg, device_name.c_str());
-            if (sendto(dest, "rfc-evaluator-rules", &msg) != 0) {
+            int r = mlm_client_sendto(_client, dest, "rfc-evaluator-rules", NULL, TIMEOUT, &msg);
+            if (r != 0) {
                 log_error("mlm_client_sendto (address = '%s', subject = '%s', timeout = '5000') failed.", dest,
                     "rfc-evaluator-rules");
             }
@@ -431,7 +441,7 @@ void Autoconfig::onPoll()
 
                 device_configured &= iTemplateRuleConfigurator.configure (
                     it.first, it.second,
-                    Autoconfig::getEname (la), client ()
+                    Autoconfig::getEname (la), _client
                 );
             }
             else {
@@ -601,7 +611,7 @@ void Autoconfig::listTemplates(const char* correlation_id, const char* filter)
 
     log_debug("%zu templates match '%s'", count, filter);
 
-    mlm_client_sendto(_client, sender(), RULES_SUBJECT, mlm_client_tracker(_client), 1000, &reply);
+    mlm_client_sendto(_client, mlm_client_sender(_client), RULES_SUBJECT, mlm_client_tracker(_client), 1000, &reply);
     zmsg_destroy(&reply);
 }
 
