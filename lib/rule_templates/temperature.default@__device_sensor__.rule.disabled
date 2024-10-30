@@ -11,8 +11,8 @@
         "values"        :   [
             {"low_critical"  : "0"},
             {"low_warning"   : "0"},
-            {"high_warning"  : "15"},
-            {"high_critical" : "16"} ],
+            {"high_warning"  : "45"},
+            {"high_critical" : "50"} ],
         "results" :   [
             { "low_critical"  : { "action" : [ ], "severity" : "CRITICAL", "description" : "{\"key\" : \"TRANSLATE_LUA(Temperature is critically low in {{ename}}.)\", \"variables\" : {\"ename\" : { \"value\" : \"__ename__\", \"assetLink\" : \"__name__\" } } }", "threshold_name" : "TRANSLATE_LUA(Sensor temperature is critically low)" }},
             { "low_warning"   : { "action" : [ ], "severity" : "WARNING",  "description" : "{\"key\" : \"TRANSLATE_LUA(Temperature is low in {{ename}}.)\", \"variables\" : {\"ename\" : { \"value\" : \"__ename__\", \"assetLink\" : \"__name__\" } } }", "threshold_name" : "TRANSLATE_LUA(Sensor temperature is low)" }},
