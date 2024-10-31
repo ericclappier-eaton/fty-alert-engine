@@ -279,8 +279,6 @@ static void list_rules2(mlm_client_t* client, const char* jsonFilters, AlertConf
         // enumerated rules (see RULES_1_N)
             { "outlet.group.1.current", { T_OUTPUT_CURRENT } },
             { "outlet.group.1.voltage", { T_OUTPUT_VOLTAGE } },
-            { "ambient.1.humidity.status", { T_HUMIDITY } },  // TBD: Not used ??
-            { "ambient.1.temperature.status", { T_TEMPERATURE } }, // TBD: Not used ??
             { "ambient.1.humidity", { T_HUMIDITY } },
             { "ambient.1.temperature", { T_TEMPERATURE } },
         }; // CAT_TOKENS
@@ -289,8 +287,6 @@ static void list_rules2(mlm_client_t* client, const char* jsonFilters, AlertConf
         static const std::vector<std::pair<std::regex, std::string>> RULES_1_N = {
             { std::regex{R"(outlet\.group\.\d{1,4}\.current)"}, "outlet.group.1.current"},
             { std::regex{R"(outlet\.group\.\d{1,4}\.voltage)"}, "outlet.group.1.voltage"},
-            { std::regex{R"(ambient\.\d{1,4}\.humidity\.status)"}, "ambient.1.humidity.status"}, // TBD: Not used ??
-            { std::regex{R"(ambient\.\d{1,4}\.temperature\.status)"}, "ambient.1.temperature.status"}, // TBD: Not used ??
             { std::regex{R"(ambient\.\d{1,4}\.humidity)"}, "ambient.1.humidity"},
             { std::regex{R"(ambient\.\d{1,4}\.temperature)"}, "ambient.1.temperature"},
         };
